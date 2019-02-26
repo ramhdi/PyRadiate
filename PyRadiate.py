@@ -22,67 +22,67 @@ def angle_min(a,b):
     return r
 
 # function for finding peak power angle
-def peak_power(rp):
+def peak_power(rp, fs):
     t = 0
     found1 = False
     
-    while (t < 36 and not(found1)):
-        found1 = rp[t] == 1
+    while (t < 360 & (not found1)):
+        found1 = (rp[t//fs] == 1)
         
         if(not(found1)):
-            t += 1
+            t += fs
 
-    return(t*10)
+    return(t)
 
 # function for half power beamwidth
-def hpbw(rp):
-    angle_1 = peak_power(rp)
+def hpbw(rp, fs):
+    angle_1 = peak_power(rp, fs)
     t1 = 0
     t2 = 0
     found2 = False
     found3 = False
     
-    while (angle_plus(angle_1, t1*10)//10 < 36 and not(found2)):
-        found2 = rp[angle_plus(angle_1, t1*10)//10] <= 0.5
-        #print ("rp1 = %d" % rp[angle_plus(angle_1, t1)//10])
-        if(not(found2)):
-            t1 += 1
+    while ((angle_plus(angle_1, t1) < 360) & (not found2)):
+        found2 = (rp[angle_plus(angle_1, t1)//fs] <= 0.5)
+        #print ("rp1 = %d\n" % rp[angle_plus(angle_1, t1)//fs])
+        if(not found2):
+            t1 += fs
     
-    while (angle_min(angle_1, t2*10)//10 < 36 and not(found3)):
-        found3 = rp[angle_min(angle_1, t2*10)//10] <= 0.5
-        #print("rp2 = %d" % rp[angle_min(angle_1, t2)//10])
-        if(not(found3)):
-            t2 += 1
+    while ((angle_min(angle_1, t2) < 360) & (not found3)):
+        found3 = (rp[angle_min(angle_1, t2)//fs] <= 0.5)
+        #print("rp2 = %d\n" % rp[angle_min(angle_1, t2)//fs])
+        if(not found3):
+            t2 += fs
 
-    t1 -= 1
-    t2 -= 1
-    return(10*(t1+t2))
+    t1 -= fs
+    t2 -= fs
+    return(t1+t2)
 
 # main program
 if __name__ == '__main__':
     # open .csv data
-    df = pd.read_csv(sys.argv[1])
-
+    df = pd.read_csv(sys.argv[1], sep=';')
+    fs = int(sys.argv[2]) # frequency step
     # data variables
     phi = np.radians(df['sudut'])
 
-    power_azimuth = df['azimuth']
+    power_azimuth = list(df['azimuth'])
     # power_azimuth = [10**(x/10) for x in df['azimuth']]
     norm_power_azimuth = [x/max(power_azimuth) for x in power_azimuth]
 
-    power_elev = df['elevation']
+    power_elev = list(df['elevation'])
     # power_elev = [10**(x/10) for x in df['elevation']]
     norm_power_elev= [x/max(power_elev) for x in power_elev]
 
-    solid_angle = np.radians(hpbw(norm_power_azimuth) + hpbw(norm_power_elev))
+    solid_angle = np.radians(hpbw(norm_power_azimuth, fs)) * np.radians(hpbw(norm_power_elev, fs))
     peak_directivity = 4*np.pi/solid_angle
-    gain = 8
+    gain = float(sys.argv[3])
     efficiency = 10**(gain - 10*np.log10(peak_directivity))
     print(gain, 10*np.log10(peak_directivity), efficiency)
 
     # textbox
-    param_azimuth = "Peak power angle = %d \nHPBW = %d" % (peak_power(norm_power_azimuth), hpbw(norm_power_azimuth))
-    param_elev = "Peak power angle = %d \nHPBW = %d" % (peak_power(norm_power_elev), hpbw(norm_power_elev))
+    param_azimuth = "Peak power angle = %d \nHPBW = %d" % (peak_power(norm_power_azimuth, fs), hpbw(norm_power_azimuth, fs))
+    param_elev = "Peak power angle = %d \nHPBW = %d" % (peak_power(norm_power_elev, fs), hpbw(norm_power_elev, fs))
     props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
 
     # plot setup
